@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xiaotian // 赛博茶屋 · 个人博客与数字游乐场</title>
+  <style>
+    :root {
+      --bg-deep: #0a0a1a;
+      --bg-purple: #1a1035;
+      --neon-pink: #ff6b9d;
+      --neon-pink-glow: rgba(255, 107, 157, 0.45);
+      --electric-blue: #4ecdc4;
+      --electric-blue-glow: rgba(78, 205, 196, 0.45);
+      --glass-bg: rgba(255, 255, 255, 0.04);
+      --glass-bg-hover: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --text-main: #f0f4f8;
+      --text-muted: #9aa5b8;
+      --nav-height: 72px;
+      --radius-lg: 20px;
+      --radius-md: 12px;
+      --transition-smooth: 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-purple) 55%, #0d0b26 100%);
+      background-attachment: fixed;
+      position: relative;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* 恢复触摸设备默认光标 */
+    @media (pointer: coarse) {
+      body, a, button {
+        cursor: auto !important;
+      }
+      .cursor-dot, .cursor-ring {
+        display: none !important;
+      }
+    }
+
+    a, button {
+      cursor: none;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* 自定义滚动条 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-deep);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--neon-pink), var(--electric-blue));
+      border-radius: 4px;
+    }
+
+    /* ================= 背景 Canvas 层 ================= */
+    .canvas-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+    }
+
+    #code-rain-canvas {
+      z-index: 0;
+      opacity: 0.1;
+    }
+
+    #nebula-canvas {
+      z-index: 1;
+    }
+
+    /* 环境霓虹光晕球 */
+    .ambient-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(110px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.35;
+    }
+    .orb-pink {
+      width: 420px;
+      height: 420px;
+      background: var(--neon-pink);
+      top: -100px;
+      left: -120px;
+    }
+    .orb-blue {
+      width: 480px;
+      height: 480px;
+      background: var(--electric-blue);
+      bottom: -140px;
+      right: -120px;
+    }
+
+    /* ================= 自定义霓虹光标 ================= */
+    .cursor-dot {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      background: var(--neon-pink);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 12px var(--neon-pink), 0 0 24px var(--neon-pink);
+      transition: width 0.2s ease, height 0.2s ease, background-color 0.2s ease;
+    }
+
+    .cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 36px;
+      height: 36px;
+      border: 1.5px solid var(--electric-blue);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px rgba(78, 205, 196, 0.3), inset 0 0 10px rgba(78, 205, 196, 0.15);
+      transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.25s ease,
+                  background-color 0.25s ease;
+    }
+
+    body.cursor-hover .cursor-dot {
+      width: 12px;
+      height: 12px;
+      background: var(--electric-blue);
+      box-shadow: 0 0 16px var(--electric-blue), 0 0 32px var(--electric-blue);
+    }
+
+    body.cursor-hover .cursor-ring {
+      width: 60px;
+      height: 60px;
+      border-color: var(--neon-pink);
+      background-color: rgba(255, 107, 157, 0.1);
+      box-shadow: 0 0 25px rgba(255, 107, 157, 0.45);
+    }
+
+    /* ================= 顶部固定导航栏 ================= */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: var(--nav-height);
+      z-index: 1000;
+      background: rgba(10, 10, 26, 0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      transition: var(--transition-smooth);
+    }
+
+    .navbar.scrolled {
+      background: rgba(10, 10, 26, 0.8);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .nav-container {
+      max-width: 1240px;
+      height: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: 1px;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--neon-pink), var(--electric-blue));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #0a0a1a;
+      font-weight: 900;
+      font-family: monospace;
+      box-shadow: 0 0 16px var(--neon-pink-glow);
+    }
+
+    .brand-text {
+      background: linear-gradient(90deg, #ffffff 20%, var(--neon-pink) 60%, var(--electric-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-link {
+      position: relative;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: 6px 2px;
+      transition: color 0.25s ease;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 0%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--neon-pink), var(--electric-blue));
+      box-shadow: 0 0 8px var(--neon-pink);
+      transition: width 0.3s ease;
+      border-radius: 2px;
+    }
+
+    .nav-link:hover::after,
+    .nav-link.active::after {
+      width: 100%;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-main);
+      font-size: 1.2rem;
+    }
+
+    /* ================= 主体容器与通用样式 ================= */
+    main {
+      position: relative;
+      z-index: 2;
+    }
+
+    section {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 100px 24px;
+    }
+
+    .section-header {
+      margin-bottom: 52px;
+      text-align: center;
+    }
+
+    .section-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-family: monospace;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--electric-blue);
+      background: rgba(78, 205, 196, 0.1);
+      border: 1px solid rgba(78, 205, 196, 0.3);
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: clamp(1.9rem, 3.5vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      background: linear-gradient(90deg, #ffffff, var(--neon-pink), var(--electric-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+      font-size: 1rem;
+    }
+
+    /* 玻璃拟态基础卡片 */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+      transition: var(--transition-smooth);
+    }
+
+    /* ================= Hero 首屏区域 ================= */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: calc(var(--nav-height) + 40px);
+      text-align: center;
+    }
+
+    .hero-panel {
+      max-width: 880px;
+      width: 100%;
+      padding: 64px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--neon-pink), var(--electric-blue), transparent);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--electric-blue);
+      box-shadow: 0 0 10px var(--electric-blue);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.5; }
+    }
+
+    .hero-title {
+      font-size: clamp(2.5rem, 6vw, 4.4rem);
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    .hero-title .highlight-pink {
+      color: var(--neon-pink);
+      text-shadow: 0 0 28px var(--neon-pink-glow);
+    }
+
+    .hero-title .highlight-blue {
+      color: var(--electric-blue);
+      text-shadow: 0 0 28px var(--electric-blue-glow);
+    }
+
+    .typewriter-wrapper {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+      font-size: clamp(1rem, 2.2vw, 1.35rem);
+      color: #d6deeb;
+      margin-bottom: 26px;
+    }
+
+    .typewriter-prefix {
+      color: var(--neon-pink);
+      margin-right: 10px;
+      font-weight: 700;
+    }
+
+    .typewriter-cursor {
+      display: inline-block;
+      width: 10px;
+      height: 1.25em;
+      background: var(--electric-blue);
+      margin-left: 6px;
+      vertical-align: middle;
+      box-shadow: 0 0 10px var(--electric-blue);
+      animation: blinkCursor 0.9s steps(2, start) infinite;
+    }
+
+    @keyframes blinkCursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-desc {
+      max-width: 620px;
+      margin: 0 auto 38px;
+      color: var(--text-muted);
+      font-size: 1.02rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn-neon {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 32px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.98rem;
+      letter-spacing: 0.5px;
+      transition: var(--transition-smooth);
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--neon-pink), #d946ef);
+      color: #ffffff;
+      box-shadow: 0 0 22px var(--neon-pink-glow), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 0 35px rgba(255, 107, 157, 0.8), 0 0 60px rgba(255, 107, 157, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(78, 205, 196, 0.12);
+      color: var(--electric-blue);
+      border: 1px solid var(--electric-blue);
+      box-shadow: 0 0 20px rgba(78, 205, 196, 0.25), inset 0 0 12px rgba(78, 205, 196, 0.15);
+      backdrop-filter: blur(12px);
+    }
+
+    .btn-secondary:hover {
+      background: var(--electric-blue);
+      color: #0a0a1a;
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 0 35px rgba(78, 205, 196, 0.85);
+    }
+
+    /* ================= 博客文章区 ================= */
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 28px;
+    }
+
+    .blog-card {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .blog-card:hover {
+      transform: translateY(-8px);
+      background: var(--glass-bg-hover);
+      border-color: rgba(255, 107, 157, 0.45);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 25px rgba(255, 107, 157, 0.2);
+    }
+
+    .blog-cover {
+      height: 190px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      padding: 16px;
+    }
+
+    .cover-1 {
+      background: radial-gradient(circle at 20% 20%, #ff6b9d 0%, #3b1d5e 55%, #0a0a1a 100%);
+    }
+    .cover-2 {
+      background: radial-gradient(circle at 80% 25%, #4ecdc4 0%, #1d3557 55%, #0a0a1a 100%);
+    }
+    .cover-3 {
+      background: linear-gradient(135deg, #ff6b9d 0%, #6a4c93 50%, #4ecdc4 100%);
+    }
+
+    /* 封面装饰网格纹 */
+    .blog-cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.5;
+      transition: transform 0.5s ease;
+    }
+
+    .blog-card:hover .blog-cover::after {
+      transform: scale(1.1);
+    }
+
+    .blog-tag {
+      position: relative;
+      z-index: 1;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(10, 10, 26, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--electric-blue);
+    }
+
+    .blog-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .blog-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .blog-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #ffffff;
+      transition: color 0.25s ease;
+    }
+
+    .blog-card:hover .blog-title {
+      color: var(--neon-pink);
+    }
+
+    .blog-excerpt {
+      color: var(--text-muted);
+      font-size: 0.94rem;
+      margin-bottom: 20px;
+      flex: 1;
+    }
+
+    .blog-readmore {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--electric-blue);
+      transition: gap 0.25s ease;
+    }
+
+    .blog-card:hover .blog-readmore {
+      gap: 12px;
+      color: var(--neon-pink);
+    }
+
+    /* ================= 游戏传送门区 (Game Hub) ================= */
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+    }
+
+    .game-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 30px 26px;
+      overflow: hidden;
+      isolation: isolate;
+      text-decoration: none;
+    }
+
+    /* 能量边框闪烁层 */
+    .game-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-lg);
+      padding: 2px;
+      background: linear-gradient(120deg, var(--neon-pink), var(--electric-blue), var(--neon-pink));
+      background-size: 200% 200%;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.25;
+      transition: opacity 0.35s ease;
+      z-index: -1;
+    }
+
+    /* 扫描线掠过层 */
+    .game-card::after {
+      content: "";
+      position: absolute;
+      top: -120%;
+      left: -50%;
+      width: 200%;
+      height: 70px;
+      background: linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(78, 205, 196, 0.12) 45%,
+        rgba(255, 107, 157, 0.55) 50%,
+        rgba(78, 205, 196, 0.12) 55%,
+        transparent 100%
+      );
+      transform: rotate(-15deg);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 2;
+    }
+
+    .game-card:hover {
+      transform: translateY(-8px) scale(1.015);
+      background: rgba(255, 255, 255, 0.075);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6),
+                  0 0 28px rgba(78, 205, 196, 0.28),
+                  0 0 18px rgba(255, 107, 157, 0.25);
+    }
+
+    .game-card:hover::before {
+      opacity: 1;
+      animation: energyBorderPulse 1.4s linear infinite;
+    }
+
+    .game-card:hover::after {
+      opacity: 1;
+      animation: scanlineSweep 1.25s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    @keyframes scanlineSweep {
+      0% {
+        top: -60%;
+      }
+      100% {
+        top: 140%;
+      }
+    }
+
+    @keyframes energyBorderPulse {
+      0% {
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 6px var(--neon-pink));
+      }
+      50% {
+        background-position: 100% 50%;
+        filter: drop-shadow(0 0 12px var(--electric-blue));
+      }
+      100% {
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 6px var(--neon-pink));
+      }
+    }
+
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .game-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, rgba(255, 107, 157, 0.2), rgba(78, 205, 196, 0.2));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.08);
+    }
+
+    .game-status {
+      font-family: monospace;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(78, 205, 196, 0.12);
+      color: var(--electric-blue);
+      border: 1px solid rgba(78, 205, 196, 0.35);
+    }
+
+    .game-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .game-desc {
+      color: var(--text-muted);
+      font-size: 0.94rem;
+      margin-bottom: 26px;
+      flex: 1;
+    }
+
+    .game-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .game-domain {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .launch-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #0a0a1a;
+      background: linear-gradient(90deg, var(--electric-blue), var(--neon-pink));
+      box-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .game-card:hover .launch-btn {
+      transform: translateX(3px) scale(1.05);
+      box-shadow: 0 0 24px var(--neon-pink);
+    }
+
+    /* ================= 关于博主区 ================= */
+    .about-card {
+      padding: 44px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px;
+      align-items: center;
+    }
+
+    .about-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .about-text {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      font-size: 0.98rem;
+    }
+
+    .skill-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .skill-pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-family: monospace;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+      transition: var(--transition-smooth);
+    }
+
+    .skill-pill:hover {
+      border-color: var(--neon-pink);
+      color: var(--neon-pink);
+      box-shadow: 0 0 14px var(--neon-pink-glow);
+      transform: translateY(-2px);
+    }
+
+    .terminal-box {
+      background: rgba(8, 8, 20, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 0.88rem;
+      color: #d6deeb;
+      box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6);
+    }
+
+    .terminal-header {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .term-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+    .term-red { background: #ff5f56; }
+    .term-yellow { background: #ffbd2e; }
+    .term-green { background: #27c93f; }
+
+    .terminal-line {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .cmd-prompt { color: var(--neon-pink); }
+    .cmd-key { color: var(--electric-blue); }
+
+    /* ================= 极简页脚 ================= */
+    footer {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid var(--glass-border);
+      background: rgba(10, 10, 26, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .footer-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .footer-highlight {
+      color: var(--neon-pink);
+      font-weight: 600;
+    }
+
+    /* ================= 滚动揭示动画 (IntersectionObserver) ================= */
+    .reveal {
+      opacity: 0;
+      transform: translateY(36px);
+      transition: opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .delay-1 { transition-delay: 0.1s; }
+    .delay-2 { transition-delay: 0.2s; }
+    .delay-3 { transition-delay: 0.3s; }
+
+    /* ================= 响应式适配 ================= */
+    @media (max-width: 900px) {
+      .about-card {
+        grid-template-columns: 1fr;
+        padding: 32px 24px;
+      }
+      .hero-panel {
+        padding: 48px 24px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .menu-toggle {
+        display: inline-flex;
+      }
+      .nav-links {
+        position: fixed;
+        top: var(--nav-height);
+        left: 0;
+        right: 0;
+        background: rgba(10, 10, 26, 0.94);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        flex-direction: column;
+        padding: 24px;
+        gap: 18px;
+        border-bottom: 1px solid var(--glass-border);
+        transform: translateY(-130%);
+        transition: transform 0.35s ease;
+      }
+      .nav-links.open {
+        transform: translateY(0);
+      }
+      .footer-inner {
+        flex-direction: column;
+        justify-content: center;
+      }
+    }
+
+    /* ================= 减少动画偏好支持 ================= */
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+      .typewriter-cursor,
+      .status-dot,
+      .game-card:hover::before,
+      .game-card:hover::after {
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 环境光晕装饰 -->
+  <div class="ambient-orb orb-pink" aria-hidden="true"></div>
+  <div class="ambient-orb orb-blue" aria-hidden="true"></div>
+
+  <!-- 代码雨氛围层 Canvas (透明度 0.1) -->
+  <canvas id="code-rain-canvas" class="canvas-layer" aria-hidden="true"></canvas>
+
+  <!-- 粒子星云交互层 Canvas -->
+  <canvas id="nebula-canvas" class="canvas-layer" aria-hidden="true"></canvas>
+
+  <!-- 自定义霓虹光标 -->
+  <div class="cursor-dot" id="cursor-dot" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- 1. 固定玻璃拟态导航栏 -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#hero" class="brand interactive">
+        <span class="brand-logo">喵</span>
+        <span class="brand-text">xiaotian</span>
+      </a>
+      <button class="menu-toggle interactive" id="menu-toggle" aria-label="切换导航菜单">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#hero" class="nav-link active interactive">首页</a></li>
+        <li><a href="#blog" class="nav-link interactive">博客</a></li>
+        <li><a href="#games" class="nav-link interactive">游戏导航</a></li>
+        <li><a href="#about" class="nav-link interactive">关于</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <!-- 2. Hero 首屏区域 -->
+    <section id="hero">
+      <div class="glass-card hero-panel reveal visible">
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          <span>张艺铭的博客网站</span>
+        </div>
+        <h1 class="hero-title">
+          探索 <span class="highlight-pink">赛博美学</span> 与<br />
+          <span class="highlight-blue">创意前端</span> 的数字花园
+        </h1>
+        <div class="typewriter-wrapper" aria-live="polite">
+          <span class="typewriter-prefix">&gt;</span>
+          <span id="typewriter-text">Creative Frontend &amp; Interactive Design</span>
+          <span class="typewriter-cursor" aria-hidden="true"></span>
+        </div>
+        <p class="hero-desc">
+          欢迎来到ZYM的个人博客
+        </p>
+        <div class="hero-actions">
+          <a href="#blog" class="btn-neon btn-primary interactive">
+            <span>阅读最新介绍</span>
+            <span>→</span>
+          </a>
+          <a href="#games" class="btn-neon btn-secondary interactive">
+            <span>进入赛博游乐场</span>
+            <span>⚡</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 博客文章区 -->
+    <section id="blog">
+      <div class="section-header reveal">
+        <span class="section-badge">提的建议</span>
+        <h2 class="section-title">关于课代表</h2>
+        <p class="section-subtitle">终于当上课代表了，热爱语文，热爱写作，喜欢在bilibili发布随笔</p>
+      </div>
+
+      <div class="blog-grid">
+        <article class="glass-card blog-card reveal delay-1 interactive">
+          <div class="blog-cover cover-1">
+            <span关于我很抽象这件事</span>
+          </div>
+          <div class="blog-body">
+            <div class="blog-meta">
+              <span>2026-11-05</span>
+              <span>•</span>
+              <span>8 min read</span>
+            </div>
+            <h3 class="blog-title">抽象的我</h3>
+            <p class="blog-excerpt">
+              原本我就很抽象…上了初中我快阴死人了（其实我很高冷的………）
+            </p>
+            <a href="#blog" class="blog-readmore interactive">阅读全文 <span>→</span></a>
+          </div>
+        </article>
+
+        <article class="glass-card blog-card reveal delay-2 interactive">
+          <div class="blog-cover cover-2">
+            <span class="blog-tag">我的bilibili号介绍</span>
+          </div>
+          <div class="blog-body">
+            <div class="blog-meta">
+              <span>2026-10-22</span>
+              <span>•</span>
+              <span>6 min read</span>
+            </div>
+            <h3 class="blog-title">我的bilibili号叫做Xiaotian不会剪辑</h3>
+            <p class="blog-excerpt">
+              在B站中学习…
+            </p>
+            <a href="#blog" class="blog-readmore interactive">阅读全文 <span>→</span></a>
+          </div>
+        </article>
+
+        <article class="glass-card blog-card reveal delay-3 interactive">
+          <div class="blog-cover cover-3">
+            <span class="blog-tag">关于我的新项目的开发进程</span>
+          </div>
+          <div class="blog-body">
+            <div class="blog-meta">
+              <span>2026-10-08</span>
+              <span>•</span>
+              <span>10 min read</span>
+            </div>
+            <h3 class="blog-title">这个域名原本是用来搞blilblil高仿B站和小红书项目买的</h3>
+            <p class="blog-excerpt">
+              我已经从安卓手机上的本地服务上成功运行了代码，这个我是从一位大佬的github上面节选的代码，但是我增加了认证系统
+            </p>
+            <a href="#blog" class="blog-readmore interactive">阅读全文 <span>→</span></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 4. 游戏传送门区 (核心新增) -->
+    <section id="games">
+      <div class="section-header reveal">
+        <span class="section-badge">ARCADE PORTALS</span>
+        <h2 class="section-title">赛博游乐场 / Game Hub</h2>
+        <p class="section-subtitle">无需安装，即点即玩。挑选一个次元传送门，开启你的云端休闲时刻。</p>
+      </div>
+
+      <div class="game-grid">
+        <!-- Poki.com -->
+        <a href="https://poki.com" target="_blank" rel="noopener noreferrer" class="glass-card game-card reveal delay-1 interactive">
+          <div>
+            <div class="game-header">
+              <div class="game-icon">🎮</div>
+              <span class="game-status">ONLINE • 1000+ GAMES</span>
+            </div>
+            <h3 class="game-name">Poki.com</h3>
+            <p class="game-desc">全球超人气的免费在线网页游乐场，汇聚海量精品敏捷、解谜与多人同屏小游戏，秒开即玩。</p>
+          </div>
+          <div class="game-footer">
+            <span class="game-domain">poki.com</span>
+            <span class="launch-btn">Launch ↗</span>
+          </div>
+        </a>
+
+        <!-- Bloxd.io -->
+        <a href="https://bloxd.io" target="_blank" rel="noopener noreferrer" class="glass-card game-card reveal delay-2 interactive">
+          <div>
+            <div class="game-header">
+              <div class="game-icon">🧊</div>
+              <span class="game-status">MULTIPLAYER • SANDBOX</span>
+            </div>
+            <h3 class="game-name">Bloxd.io</h3>
+            <p class="game-desc">融合体素创造、跑酷挑战、起床战争与生存建造的多人实时沙盒世界，在浏览器中畅享方块宇宙。</p>
+          </div>
+          <div class="game-footer">
+            <span class="game-domain">bloxd.io</span>
+            <span class="launch-btn">Launch ↗</span>
+          </div>
+        </a>
+
+        <!-- CrazyGames -->
+        <a href="https://www.crazygames.com" target="_blank" rel="noopener noreferrer" class="glass-card game-card reveal delay-3 interactive">
+          <div>
+            <div class="game-header">
+              <div class="game-icon">🚀</div>
+              <span class="game-status">3D WEBGL • ACTION</span>
+            </div>
+            <h3 class="game-name">CrazyGames</h3>
+            <p class="game-desc">主打次世代 HTML5 与 WebGL 3D 动作、竞速及射击游戏的云端街机平台，体验丝滑帧率对抗。</p>
+          </div>
+          <div class="game-footer">
+            <span class="game-domain">crazygames.com</span>
+            <span class="launch-btn">Launch ↗</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 关于区域 -->
+    <section id="about">
+      <div class="glass-card about-card reveal">
+        <div>
+          <span class="section-badge">ABOUT CREATOR</span>
+          <h2 class="about-title">关于Xiaotian</h2>
+          <p class="about-text">
+            一直泡在书里写作，热忱于写随笔，感动他人，热爱语文
+          </p>
+          <div class="skill-tags">
+            <span class="skill-pill interactive">HTML5 Canvas</span>
+            <span class="skill-pill interactive">WebGL / Shaders</span>
+            <span class="skill-pill interactive">CSS Glassmorphism</span>
+            <span class="skill-pill interactive">Vanilla JavaScript</span>
+            <span class="skill-pill interactive">Interactive Motion</span>
+            <span class="skill-pill interactive">Creative Coding</span>
+          </div>
+        </div>
+        <div class="terminal-box">
+          <div class="terminal-header">
+            <span class="term-dot term-red"></span>
+            <span class="term-dot term-yellow"></span>
+            <span class="term-dot term-green"></span>
+          </div>
+          <div class="terminal-line"><span class="cmd-prompt">xiaotian@cyber-tea:~$</span> cat profile.json</div>
+          <div class="terminal-line">{</div>
+          <div class="terminal-line">&nbsp;&nbsp;<span class="cmd-key">"host"</span>: "xiaotian",</div>
+          <div class="terminal-line">&nbsp;&nbsp;<span class="cmd-key">"role"</span>: "Creative Frontend Engineer",</div>
+          <div class="terminal-line">&nbsp;&nbsp;<span class="cmd-key">"theme"</span>: "Nebula Glass &amp; Cyber Neon",</div>
+          <div class="terminal-line">&nbsp;&nbsp;<span class="cmd-key">"dependencies"</span>: "Zero (100% Vanilla)",</div>
+          <div class="terminal-line">&nbsp;&nbsp;<span class="cmd-key">"status"</span>: "Brewing code &amp; tea ☕"</div>
+          <div class="terminal-line">}</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 5. 页脚 -->
+  <footer>
+    <div class="footer-inner">
+      <div>© 2026 <span class="footer-highlight">xiaotian</span>. Crafted with pure HTML, CSS &amp; Vanilla JS.</div>
+      <div>Neon Nebula Edition // All Systems Nominal</div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // 检测系统减少动画偏好
+      const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let prefersReducedMotion = motionQuery.matches;
+
+      motionQuery.addEventListener("change", (e) => {
+        prefersReducedMotion = e.matches;
+        if (prefersReducedMotion) {
+          stopTypewriter();
+          renderStaticCanvases();
+        } else {
+          startTypewriter();
+          startAnimationLoop();
+        }
+      });
+
+      /* =========================================================
+         1. 导航栏交互 & 移动端菜单
+      ========================================================= */
+      const navbar = document.getElementById("navbar");
+      const menuToggle = document.getElementById("menu-toggle");
+      const navLinksContainer = document.getElementById("nav-links");
+      const navLinks = document.querySelectorAll(".nav-link");
+
+      window.addEventListener("scroll", () => {
+        if (window.scrollY > 30) {
+          navbar.classList.add("scrolled");
+        } else {
+          navbar.classList.remove("scrolled");
+        }
+      }, { passive: true });
+
+      menuToggle.addEventListener("click", () => {
+        navLinksContainer.classList.toggle("open");
+      });
+
+      navLinks.forEach((link) => {
+        link.addEventListener("click", () => {
+          navLinksContainer.classList.remove("open");
+          navLinks.forEach((item) => item.classList.remove("active"));
+          link.classList.add("active");
+        });
+      });
+
+      /* =========================================================
+         2. 自定义霓虹光标 (光点 + 缓动圆环)
+      ========================================================= */
+      const cursorDot = document.getElementById("cursor-dot");
+      const cursorRing = document.getElementById("cursor-ring");
+      const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+
+      let mouseX = window.innerWidth / 2;
+      let mouseY = window.innerHeight / 2;
+      let ringX = mouseX;
+      let ringY = mouseY;
+      let mouseActive = false;
+
+      if (!isCoarsePointer) {
+        window.addEventListener("mousemove", (e) => {
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+          mouseActive = true;
+          cursorDot.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
+        }, { passive: true });
+
+        window.addEventListener("mouseleave", () => {
+          mouseActive = false;
+        });
+
+        const interactiveElements = document.querySelectorAll("a, button, .interactive");
+        interactiveElements.forEach((el) => {
+          el.addEventListener("mouseenter", () => document.body.classList.add("cursor-hover"));
+          el.addEventListener("mouseleave", () => document.body.classList.remove("cursor-hover"));
+        });
+      }
+
+      /* =========================================================
+         3. 打字机效果 (Hero 副标题循环打字)
+      ========================================================= */
+      const typewriterEl = document.getElementById("typewriter-text");
+      const phrases = [
+        "欢迎来到我的个人blog",
+        "微机课救星",
+        "个人介绍与简介",
+        "Welcome to my blog."
+      ];
+      let phraseIndex = 0;
+      let charIndex = 0;
+      let isDeleting = false;
+      let typewriterTimer = null;
+
+      function tickTypewriter() {
+        if (prefersReducedMotion) return;
+
+        const currentPhrase = phrases[phraseIndex];
+        if (isDeleting) {
+          charIndex--;
+        } else {
+          charIndex++;
+        }
+
+        typewriterEl.textContent = currentPhrase.substring(0, charIndex);
+
+        let delay = isDeleting ? 38 : 75;
+
+        if (!isDeleting && charIndex === currentPhrase.length) {
+          delay = 2000;
+          isDeleting = true;
+        } else if (isDeleting && charIndex === 0) {
+          isDeleting = false;
+          phraseIndex = (phraseIndex + 1) % phrases.length;
+          delay = 420;
+        }
+
+        typewriterTimer = setTimeout(tickTypewriter, delay);
+      }
+
+      function startTypewriter() {
+        clearTimeout(typewriterTimer);
+        if (!prefersReducedMotion) {
+          tickTypewriter();
+        }
+      }
+
+      function stopTypewriter() {
+        clearTimeout(typewriterTimer);
+        typewriterEl.textContent = phrases[0];
+      }
+
+      startTypewriter();
+
+      /* =========================================================
+         4. IntersectionObserver 滚动揭示动画
+      ========================================================= */
+      const revealElements = document.querySelectorAll(".reveal");
+
+      if ("IntersectionObserver" in window && !prefersReducedMotion) {
+        const revealObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, {
+          threshold: 0.14,
+          rootMargin: "0px 0px -40px 0px"
+        });
+
+        revealElements.forEach((el) => revealObserver.observe(el));
+      } else {
+        revealElements.forEach((el) => el.classList.add("visible"));
+      }
+
+      /* =========================================================
+         5. 双层 Canvas 特效 (粒子星云 + 极淡代码雨)
+      ========================================================= */
+      const nebulaCanvas = document.getElementById("nebula-canvas");
+      const nebulaCtx = nebulaCanvas.getContext("2d");
+      const rainCanvas = document.getElementById("code-rain-canvas");
+      const rainCtx = rainCanvas.getContext("2d");
+
+      let width = window.innerWidth;
+      let height = window.innerHeight;
+
+      // 粒子星云配置
+      let particles = [];
+      const particleColors = ["#ff6b9d", "#4ecdc4", "#a78bfa", "#ffffff"];
+      const repulsionRadius = 135;
+
+      // 代码雨配置
+      const rainChars = "01 xiaotian ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ <>/{}[]+*";
+      const fontSize = 16;
+      let rainColumns = 0;
+      let rainDrops = [];
+      let rainFrameCount = 0;
+
+      function initCanvases() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+
+        nebulaCanvas.width = width;
+        nebulaCanvas.height = height;
+        rainCanvas.width = width;
+        rainCanvas.height = height;
+
+        // 根据屏幕尺寸自适应粒子数量
+        const count = Math.min(95, Math.max(35, Math.floor((width * height) / 16000)));
+        particles = [];
+        for (let i = 0; i < count; i++) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.65,
+            vy: (Math.random() - 0.5) * 0.65,
+            radius: Math.random() * 2.2 + 1,
+            color: particleColors[Math.floor(Math.random() * particleColors.length)],
+            alpha: Math.random() * 0.55 + 0.3
+          });
+        }
+
+        // 初始化代码雨列
+        rainColumns = Math.floor(width / fontSize);
+        rainDrops = [];
+        for (let i = 0; i < rainColumns; i++) {
+          rainDrops[i] = Math.random() * -50;
+        }
+      }
+
+      function updateAndDrawNebula() {
+        nebulaCtx.clearRect(0, 0, width, height);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+
+          if (!prefersReducedMotion) {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // 边界环绕
+            if (p.x < 0) p.x = width;
+            if (p.x > width) p.x = 0;
+            if (p.y < 0) p.y = height;
+            if (p.y > height) p.y = 0;
+
+            // 鼠标靠近排斥力交互
+            if (mouseActive) {
+              const dx = p.x - mouseX;
+              const dy = p.y - mouseY;
+              const distSq = dx * dx + dy * dy;
+              if (distSq < repulsionRadius * repulsionRadius && distSq > 1) {
+                const dist = Math.sqrt(distSq);
+                const force = (repulsionRadius - dist) / repulsionRadius;
+                p.x += (dx / dist) * force * 3.2;
+                p.y += (dy / dist) * force * 3.2;
+              }
+            }
+          }
+
+          // 绘制粒子光点
+          nebulaCtx.beginPath();
+          nebulaCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          nebulaCtx.fillStyle = p.color;
+          nebulaCtx.globalAlpha = p.alpha;
+          nebulaCtx.fill();
+
+          // 星云粒子间微光连线
+          for (let j = i + 1; j < particles.length; j++) {
+            const p2 = particles[j];
+            const dx = p.x - p2.x;
+            const dy = p.y - p2.y;
+            const distSq = dx * dx + dy * dy;
+            const maxDist = 125;
+
+            if (distSq < maxDist * maxDist) {
+              const dist = Math.sqrt(distSq);
+              const lineAlpha = (1 - dist / maxDist) * 0.22;
+              nebulaCtx.beginPath();
+              nebulaCtx.moveTo(p.x, p.y);
+              nebulaCtx.lineTo(p2.x, p2.y);
+              nebulaCtx.strokeStyle = "#4ecdc4";
+              nebulaCtx.globalAlpha = lineAlpha;
+              nebulaCtx.lineWidth = 0.7;
+              nebulaCtx.stroke();
+            }
+          }
+        }
+        nebulaCtx.globalAlpha = 1;
+      }
+
+      function updateAndDrawCodeRain() {
+        if (prefersReducedMotion) return;
+
+        // 降低代码雨刷新速率，营造优雅舒缓的飘落感
+        rainFrameCount++;
+        if (rainFrameCount % 2 !== 0) return;
+
+        rainCtx.fillStyle = "rgba(10, 10, 26, 0.08)";
+        rainCtx.fillRect(0, 0, width, height);
+
+        rainCtx.font = `${fontSize}px monospace`;
+
+        for (let i = 0; i < rainDrops.length; i++) {
+          const char = rainChars.charAt(Math.floor(Math.random() * rainChars.length));
+          rainCtx.fillStyle = i % 3 === 0 ? "#ff6b9d" : "#4ecdc4";
+          rainCtx.fillText(char, i * fontSize, rainDrops[i] * fontSize);
+
+          if (rainDrops[i] * fontSize > height && Math.random() > 0.975) {
+            rainDrops[i] = 0;
+          }
+          rainDrops[i] += 0.65;
+        }
+      }
+
+      function renderStaticCanvases() {
+        rainCtx.clearRect(0, 0, width, height);
+        updateAndDrawNebula();
+      }
+
+      /* =========================================================
+         6. 主动画循环 (含 document.hidden 暂停优化)
+      ========================================================= */
+      let rafId = null;
+
+      function animate() {
+        if (document.hidden) {
+          rafId = null;
+          return;
+        }
+
+        // 更新自定义光标缓动圆环
+        if (!isCoarsePointer) {
+          ringX += (mouseX - ringX) * 0.18;
+          ringY += (mouseY - ringY) * 0.18;
+          cursorRing.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
+        }
+
+        if (!prefersReducedMotion) {
+          updateAndDrawCodeRain();
+          updateAndDrawNebula();
+        }
+
+        rafId = requestAnimationFrame(animate);
+      }
+
+      function startAnimationLoop() {
+        if (!rafId && !document.hidden) {
+          rafId = requestAnimationFrame(animate);
+        }
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+        } else {
+          startAnimationLoop();
+        }
+      });
+
+      let resizeTimer = null;
+      window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          initCanvases();
+          if (prefersReducedMotion) {
+            renderStaticCanvases();
+          }
+        }, 150);
+      });
+
+      // 启动初始化
+      initCanvases();
+      if (prefersReducedMotion) {
+        renderStaticCanvases();
+      } else {
+        startAnimationLoop();
+      }
+    })();
+  </script>
+</body>
+</html>
+
